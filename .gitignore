@@ -1,0 +1,24 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs and local data
+*.log
+uploads/
+qdrant_storage/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Frontend dependencies
+node_modules/
