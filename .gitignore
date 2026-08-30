@@ -22,3 +22,7 @@ Thumbs.db
 
 # Frontend dependencies
 node_modules/
+.claude/
+.gitnexus/
+AGENTS.md
+CLAUDE.md

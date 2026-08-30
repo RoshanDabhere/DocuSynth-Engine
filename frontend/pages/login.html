@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Login | DocuSynth</title><link rel="stylesheet" href="../css/styles.css"></head>
+<body class="auth-page" data-page="login">
+  <main class="auth-card">
+    <div class="brand"><span class="brand-mark">D</span> DocuSynth</div>
+    <h1>Welcome back</h1><p class="muted">Sign in to ask better questions of your documents.</p>
+    <p id="form-message" class="form-message" role="alert"></p>
+    <form id="login-form" class="form-stack">
+      <label>Email<input type="email" name="email" placeholder="you@example.com" required></label>
+      <label>Password<input type="password" name="password" placeholder="Your password" required></label>
+      <button class="button" type="submit" data-label="Sign in">Sign in</button>
+    </form>
+    <p class="auth-switch muted">No account? <a href="register.html">Create one</a></p>
+  </main>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+</body>
+</html>
