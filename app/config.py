@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 32
     embedding_dimension: int = 384
     retrieval_top_k: int = 5
+    retrieval_score_threshold: float = 0.0
     upload_directory: Path = Path("uploads")
     max_upload_size_bytes: int = 10 * 1024 * 1024
     chunk_size_tokens: int = 500
