@@ -1,9 +1,11 @@
 """LangGraph orchestration for the complete retrieval-augmented generation flow."""
 
-from typing import Sequence, TypedDict
+from collections.abc import Iterator
+from typing import Literal, Sequence, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from app.chains.conversational_rag import ConversationMemoryMessage
 from app.config import get_settings
 from app.generation.llm_service import get_llm_service
 from app.generation.prompt_builder import RAGPrompt, build_rag_prompt
@@ -21,6 +23,7 @@ class RAGSource(TypedDict):
     page_number: int
     chunk_index: int
     score: float
+    text: str
 
 
 class RAGResult(TypedDict):
@@ -30,10 +33,34 @@ class RAGResult(TypedDict):
     sources: list[RAGSource]
 
 
+class RAGSourcesEvent(TypedDict):
+    """Retrieval metadata sent independently from model-generated text."""
+
+    type: Literal["sources"]
+    sources: list[RAGSource]
+
+
+class RAGTokenEvent(TypedDict):
+    """One text fragment received directly from the LLM provider stream."""
+
+    type: Literal["token"]
+    token: str
+
+
+class RAGDoneEvent(TypedDict):
+    """Terminal marker for a successfully completed stream."""
+
+    type: Literal["done"]
+
+
+RAGStreamEvent = RAGSourcesEvent | RAGTokenEvent | RAGDoneEvent
+
+
 class RAGState(TypedDict, total=False):
     """Data passed between RAG graph nodes."""
 
     question: str
+    conversation_history: Sequence[ConversationMemoryMessage]
     user_id: int
     document_ids: Sequence[int] | None
     top_k: int | None
@@ -63,7 +90,13 @@ def filter_context(state: RAGState) -> RAGState:
 
 def create_prompt(state: RAGState) -> RAGState:
     """Build grounded system and user prompts from the filtered context."""
-    return {"prompt": build_rag_prompt(state["question"], state["chunks"])}
+    return {
+        "prompt": build_rag_prompt(
+            state["question"],
+            state["chunks"],
+            state.get("conversation_history"),
+        )
+    }
 
 
 def generate_answer(state: RAGState) -> RAGState:
@@ -85,6 +118,7 @@ def collect_sources(state: RAGState) -> RAGState:
             "page_number": chunk["page_number"],
             "chunk_index": chunk["chunk_index"],
             "score": chunk["score"],
+            "text": chunk["text"],
         }
         for source_number, chunk in enumerate(state["chunks"], start=1)
     ]
@@ -111,14 +145,15 @@ def build_rag_graph():
 RAG_GRAPH = build_rag_graph()
 
 
-def run_rag(
+def create_initial_state(
     question: str,
     user_id: int,
     document_ids: Sequence[int] | None = None,
     top_k: int | None = None,
     score_threshold: float | None = None,
-) -> RAGResult:
-    """Run the complete synchronous RAG pipeline for one authenticated user."""
+    conversation_history: Sequence[ConversationMemoryMessage] | None = None,
+) -> RAGState:
+    """Validate common RAG inputs and build the initial orchestration state."""
     normalized_question = question.strip()
     if not normalized_question:
         raise ValueError("Question cannot be empty")
@@ -135,13 +170,69 @@ def run_rag(
     if not -1 <= threshold <= 1:
         raise ValueError("score_threshold must be between -1 and 1")
 
-    result = RAG_GRAPH.invoke(
-        {
-            "question": normalized_question,
-            "user_id": user_id,
-            "document_ids": document_ids,
-            "top_k": top_k,
-            "score_threshold": threshold,
-        }
+    return {
+        "question": normalized_question,
+        "conversation_history": list(conversation_history or []),
+        "user_id": user_id,
+        "document_ids": document_ids,
+        "top_k": top_k,
+        "score_threshold": threshold,
+    }
+
+
+def run_rag(
+    question: str,
+    user_id: int,
+    document_ids: Sequence[int] | None = None,
+    top_k: int | None = None,
+    score_threshold: float | None = None,
+    conversation_history: Sequence[ConversationMemoryMessage] | None = None,
+) -> RAGResult:
+    """Run the complete synchronous RAG pipeline for one authenticated user."""
+    initial_state = create_initial_state(
+        question=question,
+        user_id=user_id,
+        document_ids=document_ids,
+        top_k=top_k,
+        score_threshold=score_threshold,
+        conversation_history=conversation_history,
     )
+    result = RAG_GRAPH.invoke(initial_state)
     return {"answer": result["answer"], "sources": result["sources"]}
+
+
+def stream_rag(
+    question: str,
+    user_id: int,
+    document_ids: Sequence[int] | None = None,
+    top_k: int | None = None,
+    score_threshold: float | None = None,
+    conversation_history: Sequence[ConversationMemoryMessage] | None = None,
+) -> Iterator[RAGStreamEvent]:
+    """Yield retrieval sources and real Ollama text fragments as they arrive."""
+    state = create_initial_state(
+        question=question,
+        user_id=user_id,
+        document_ids=document_ids,
+        top_k=top_k,
+        score_threshold=score_threshold,
+        conversation_history=conversation_history,
+    )
+    state.update(retrieve_context(state))
+    state.update(filter_context(state))
+    state.update(collect_sources(state))
+    yield {"type": "sources", "sources": state["sources"]}
+
+    if not state["chunks"]:
+        yield {"type": "token", "token": NO_CONTEXT_ANSWER}
+        yield {"type": "done"}
+        return
+
+    state.update(create_prompt(state))
+    prompt = state["prompt"]
+    for token in get_llm_service().stream_generate(
+        prompt.user,
+        system_prompt=prompt.system,
+    ):
+        yield {"type": "token", "token": token}
+    yield {"type": "done"}
