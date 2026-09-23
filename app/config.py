@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import PositiveInt, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 32
     embedding_dimension: int = 384
     retrieval_top_k: int = 5
+    retrieval_score_threshold: float = 0.0
+    conversation_memory_max_messages: PositiveInt = 8
+    conversation_memory_max_tokens: PositiveInt = 1200
     upload_directory: Path = Path("uploads")
     max_upload_size_bytes: int = 10 * 1024 * 1024
     chunk_size_tokens: int = 500

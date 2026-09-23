@@ -1,6 +1,8 @@
 """SQLAlchemy database models."""
 
+from app.models.conversation import Conversation
 from app.models.documents import Document
+from app.models.message import Message
 from app.models.user import User
 
-__all__ = ["Document", "User"]
+__all__ = ["Conversation", "Document", "Message", "User"]

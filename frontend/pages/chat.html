@@ -1,10 +1,105 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chat | DocuSynth</title><link rel="stylesheet" href="../css/styles.css"></head>
-<body data-page="chat" data-protected="true"><div class="app-shell">
-  <aside class="sidebar"><div class="brand"><span class="brand-mark">D</span> DocuSynth</div><nav class="nav"><a data-nav="dashboard" href="dashboard.html">Dashboard</a><a data-nav="documents" href="documents.html">Documents</a><a data-nav="chat" href="chat.html">Chat</a></nav><div class="sidebar-footer"><a class="muted" data-logout href="login.html">Sign out</a></div></aside>
-  <main class="main"><header class="topbar"><div><h1>Chat</h1><p class="muted">Ask grounded questions about selected documents.</p></div><button class="button" type="button">New chat</button></header>
-    <section class="chat-layout"><aside class="conversation-list"><strong>Conversations</strong><p class="muted">No conversations yet.</p></aside><div class="chat-panel"><div class="messages"><div><h2>Ask your documents</h2><p>Select a document and start a conversation.</p></div></div><form class="composer" data-demo-form><input type="text" placeholder="Ask a question…" aria-label="Question"><button class="button" type="submit">Send</button></form></div></section>
-  </main>
-</div><script type="module" src="../js/app.js"></script><script type="module" src="../js/auth.js"></script></body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Ask grounded questions across your private document library with DocuSynth.">
+  <title>Chat | DocuSynth</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body class="chat-page" data-page="chat" data-protected="true">
+  <div class="app-shell chat-shell">
+    <aside class="chat-sidebar" aria-label="Chat navigation">
+      <div class="chat-sidebar-top">
+        <a class="brand" href="dashboard.html" aria-label="DocuSynth dashboard">
+          <span class="brand-mark" aria-hidden="true">D</span>
+          <span>DocuSynth</span>
+        </a>
+        <nav class="chat-nav" aria-label="Primary navigation">
+          <a href="dashboard.html">Dashboard</a>
+          <a href="documents.html">Documents</a>
+        </nav>
+      </div>
+
+      <button id="new-chat-button" class="new-chat-button" type="button">
+        <span aria-hidden="true">+</span>
+        New chat
+      </button>
+
+      <section class="sidebar-section conversation-section" aria-labelledby="conversations-heading">
+        <div class="sidebar-section-heading">
+          <h2 id="conversations-heading">Conversations</h2>
+          <span id="conversation-count" class="count-badge">0</span>
+        </div>
+        <div id="conversation-list" class="conversation-items" aria-live="polite">
+          <p class="sidebar-empty">Your conversations will appear here.</p>
+        </div>
+      </section>
+
+      <section class="sidebar-section document-section" aria-labelledby="documents-heading">
+        <div class="sidebar-section-heading">
+          <h2 id="documents-heading">Your documents</h2>
+          <span id="document-count" class="count-badge">0</span>
+        </div>
+        <div id="document-list" class="document-items" aria-live="polite">
+          <p class="sidebar-empty">Loading documents…</p>
+        </div>
+        <a class="upload-document-link" href="documents.html">
+          <span aria-hidden="true">↑</span>
+          Upload document
+        </a>
+      </section>
+
+      <div class="chat-sidebar-footer">
+        <a data-logout href="login.html">Sign out</a>
+      </div>
+    </aside>
+
+    <main class="chat-workspace">
+      <header class="chat-header">
+        <div>
+          <p class="eyebrow">Grounded workspace</p>
+          <h1 id="conversation-title">New conversation</h1>
+        </div>
+        <div class="selected-source-summary">
+          <span class="selected-source-label">Searching</span>
+          <div id="selected-document-chips" class="selected-document-chips">
+            <span class="empty-chip">No documents selected</span>
+          </div>
+        </div>
+      </header>
+
+      <div id="chat-status" class="chat-notice" role="status" aria-live="polite"></div>
+
+      <section id="chat-messages" class="messages" aria-label="Conversation messages" aria-live="polite">
+        <div id="chat-welcome" class="chat-welcome">
+          <div class="welcome-mark" aria-hidden="true">D</div>
+          <p class="eyebrow">Private document intelligence</p>
+          <h2>What would you like to understand?</h2>
+          <p>Select one or more ready documents, then ask a question. Every answer stays grounded in your chosen sources.</p>
+          <div class="prompt-suggestions" aria-label="Example questions">
+            <button type="button" data-suggestion="Summarize the key ideas in these documents.">Summarize the key ideas</button>
+            <button type="button" data-suggestion="What are the most important facts I should know?">Find the important facts</button>
+            <button type="button" data-suggestion="Compare the main arguments across these documents.">Compare the documents</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="composer-wrap">
+        <form id="chat-form" class="composer">
+          <label class="sr-only" for="question-input">Ask a question</label>
+          <textarea id="question-input" rows="1" maxlength="4000" placeholder="Ask your documents…" required></textarea>
+          <button id="send-button" class="send-button" type="submit" aria-label="Send question">
+            <span>Send</span>
+            <span aria-hidden="true">↑</span>
+          </button>
+        </form>
+        <p class="composer-hint">Enter to send · Shift + Enter for a new line</p>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="../js/app.js"></script>
+  <script type="module" src="../js/auth.js"></script>
+  <script type="module" src="../js/chat.js"></script>
+</body>
 </html>
