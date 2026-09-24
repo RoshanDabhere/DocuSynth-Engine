@@ -124,7 +124,7 @@ function truncateSnippet(text, maxChars = 260) {
   return `${clean.slice(0, maxChars).trimEnd()}\u2026`;
 }
 
-function renderSources(container, sources) {
+function renderSources(container, sources, confidence = "none") {
   container.replaceChildren();
   if (!sources || !sources.length) return;
 
@@ -136,10 +136,22 @@ function renderSources(container, sources) {
   const headerLabel = document.createElement("span");
   headerLabel.className = "sources-label";
   headerLabel.textContent = `Sources \u00b7 ${deduplicated.length}`;
+
+  // Confidence badge
+  const confidenceBadge = document.createElement("span");
+  confidenceBadge.className = `confidence-badge confidence-${confidence}`;
+  const confidenceLabels = {
+    high: "\u2714 High Confidence",
+    medium: "\u25cf Medium Confidence",
+    low: "\u25cb Low Confidence",
+    none: "No Match",
+  };
+  confidenceBadge.textContent = confidenceLabels[confidence] || confidenceLabels.none;
+
   const headerHint = document.createElement("span");
   headerHint.className = "sources-hint";
   headerHint.textContent = "Click to see evidence";
-  header.append(headerLabel, headerHint);
+  header.append(headerLabel, confidenceBadge, headerHint);
   container.append(header);
 
   const list = document.createElement("div");
@@ -317,6 +329,7 @@ async function streamAnswer(question, documentIds, assistantMessage) {
   let answer = "";
   let buffer = "";
   let receivedFirstToken = false;
+  let confidence = "none";
 
   while (true) {
     const { done, value } = await reader.read();
@@ -337,7 +350,8 @@ async function streamAnswer(question, documentIds, assistantMessage) {
           assistantMessage.body.textContent = answer;
           scrollMessagesToBottom();
         } else if (eventType === "sources") {
-          renderSources(assistantMessage.sources, data.sources);
+          confidence = data.confidence || "none";
+          renderSources(assistantMessage.sources, data.sources, confidence);
         } else if (eventType === "done") {
           state.activeConversationId = data.conversation_id;
         } else if (eventType === "error") {

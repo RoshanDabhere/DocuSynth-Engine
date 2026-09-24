@@ -77,8 +77,10 @@ class ChatApiTests(TestCase):
                     "page_number": 2,
                     "chunk_index": 0,
                     "score": 0.91,
+                    "text": "The main idea is retrieval-grounded answering.",
                 }
             ],
+            "confidence": "high",
         }
 
         conversation = SimpleNamespace(id=23)
@@ -103,10 +105,13 @@ class ChatApiTests(TestCase):
         self.assertEqual(response.answer, rag_result["answer"])
         self.assertEqual(response.sources[0].document_id, 11)
         self.assertEqual(response.conversation_id, 23)
+        self.assertEqual(response.confidence, "high")
         run_rag_mock.assert_called_once_with(
             question="What is the main idea?",
             user_id=7,
             document_ids=[11],
+            top_k=None,
+            score_threshold=None,
             conversation_history=[],
         )
         resolve_conversation_mock.assert_called_once_with(
@@ -189,7 +194,7 @@ class RAGStreamingTests(TestCase):
         ):
             events = list(stream_rag(question="Unknown?", user_id=7, document_ids=[11]))
 
-        self.assertEqual(events[0], {"type": "sources", "sources": []})
+        self.assertEqual(events[0], {"type": "sources", "sources": [], "confidence": "none"})
         self.assertEqual(events[1], {"type": "token", "token": NO_CONTEXT_ANSWER})
         self.assertEqual(events[2], {"type": "done"})
         provider_factory.assert_not_called()

@@ -1,10 +1,12 @@
 """Chat API request and response schemas."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 PositiveIdentifier = Annotated[int, Field(gt=0)]
+
+ConfidenceLevel = Literal["high", "medium", "low", "none"]
 
 
 class ChatQueryRequest(BaseModel):
@@ -15,6 +17,8 @@ class ChatQueryRequest(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
     selected_document_ids: list[PositiveIdentifier] = Field(min_length=1, max_length=50)
     conversation_id: PositiveIdentifier | None = None
+    top_k: int | None = Field(default=None, ge=1, le=20)
+    score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @field_validator("selected_document_ids")
     @classmethod
@@ -43,3 +47,4 @@ class ChatQueryResponse(BaseModel):
     answer: str
     sources: list[ChatSource]
     conversation_id: PositiveIdentifier | None
+    confidence: ConfidenceLevel

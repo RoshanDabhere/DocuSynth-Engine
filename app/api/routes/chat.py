@@ -171,6 +171,8 @@ def query_documents(
         question=data.question,
         user_id=current_user.id,
         document_ids=data.selected_document_ids,
+        top_k=data.top_k,
+        score_threshold=data.score_threshold,
         conversation_history=conversation_history,
     )
     save_messages(
@@ -182,6 +184,7 @@ def query_documents(
         answer=result["answer"],
         sources=result["sources"],
         conversation_id=conversation.id,
+        confidence=result["confidence"],
     )
 
 
@@ -219,11 +222,16 @@ def stream_query_documents(
                 question=data.question,
                 user_id=current_user.id,
                 document_ids=data.selected_document_ids,
+                top_k=data.top_k,
+                score_threshold=data.score_threshold,
                 conversation_history=conversation_history,
             ):
                 event_type = event["type"]
                 if event_type == "sources":
-                    yield encode_sse("sources", {"sources": event["sources"]})
+                    yield encode_sse("sources", {
+                        "sources": event["sources"],
+                        "confidence": event["confidence"],
+                    })
                 elif event_type == "token":
                     answer_parts.append(event["token"])
                     yield encode_sse("token", {"token": event["token"]})

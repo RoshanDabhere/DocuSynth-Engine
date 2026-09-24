@@ -150,6 +150,13 @@ select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px
 .sources-label { color: #6fd9bc; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .sources-hint { color: #5a7191; font-size: 10px; font-style: italic; }
 
+/* Confidence badge — color-coded retrieval quality indicator */
+.confidence-badge { flex: 0 0 auto; padding: 3px 9px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; transition: opacity .2s ease; }
+.confidence-high { border: 1px solid rgba(105, 225, 194, .35); color: #6fd9bc; background: rgba(105, 225, 194, .1); }
+.confidence-medium { border: 1px solid rgba(244, 198, 107, .3); color: #f4c66b; background: rgba(244, 198, 107, .08); }
+.confidence-low { border: 1px solid rgba(255, 125, 140, .25); color: #ff9eab; background: rgba(255, 125, 140, .07); }
+.confidence-none { border: 1px solid rgba(133, 159, 190, .18); color: #7e91a8; background: rgba(133, 159, 190, .06); }
+
 .source-list { display: grid; gap: 6px; }
 
 /* Each source item wraps the card row + the collapsible evidence panel */

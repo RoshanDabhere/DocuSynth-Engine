@@ -31,7 +31,8 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 32
     embedding_dimension: int = 384
     retrieval_top_k: int = 5
-    retrieval_score_threshold: float = 0.0
+    retrieval_max_top_k: int = 20
+    retrieval_score_threshold: float = 0.35
     conversation_memory_max_messages: PositiveInt = 8
     conversation_memory_max_tokens: PositiveInt = 1200
     upload_directory: Path = Path("uploads")
