@@ -1,9 +1,10 @@
 """Authenticated document upload and management endpoints."""
 
+import asyncio
 from pathlib import Path
 
 import aiofiles
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DatabaseSession
@@ -31,7 +32,6 @@ def get_owned_document(document_id: int, user_id: int, database: DatabaseSession
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_document(
-    background_tasks: BackgroundTasks,
     current_user: CurrentUser,
     database: DatabaseSession,
     file: UploadFile = File(...),
@@ -86,7 +86,8 @@ async def upload_document(
         database.rollback()
         remove_file(stored_path)
         raise
-    background_tasks.add_task(process_document, document.id)
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, process_document, document.id)
     return document
 
 

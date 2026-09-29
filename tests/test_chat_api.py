@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from pydantic import ValidationError
 
 from app.api.routes.chat import encode_sse, query_documents, verify_selected_documents
@@ -100,6 +100,7 @@ class ChatApiTests(TestCase):
                 data=request,
                 current_user=SimpleNamespace(id=7),
                 database=database,
+                response=Response(),
             )
 
         self.assertEqual(response.answer, rag_result["answer"])

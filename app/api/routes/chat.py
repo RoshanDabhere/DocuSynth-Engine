@@ -1,9 +1,10 @@
 """Authenticated document question-answering endpoints."""
 
 import json
+import time
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -153,6 +154,7 @@ def query_documents(
     data: ChatQueryRequest,
     current_user: CurrentUser,
     database: DatabaseSession,
+    response: Response,
 ) -> ChatQueryResponse:
     """Answer a question using only the authenticated user's selected documents."""
     verify_selected_documents(data.selected_document_ids, current_user.id, database)
@@ -167,6 +169,7 @@ def query_documents(
         current_user.id,
         database,
     )
+    rag_start = time.perf_counter()
     result = run_rag(
         question=data.question,
         user_id=current_user.id,
@@ -175,11 +178,13 @@ def query_documents(
         score_threshold=data.score_threshold,
         conversation_history=conversation_history,
     )
+    rag_duration_ms = (time.perf_counter() - rag_start) * 1000
     save_messages(
         conversation,
         [("user", data.question), ("assistant", result["answer"])],
         database,
     )
+    response.headers["Server-Timing"] = f'rag;dur={rag_duration_ms:.1f}'
     return ChatQueryResponse(
         answer=result["answer"],
         sources=result["sources"],

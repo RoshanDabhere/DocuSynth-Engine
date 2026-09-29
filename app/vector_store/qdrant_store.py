@@ -1,5 +1,6 @@
 """Qdrant collection and point operations for document chunks."""
 
+import threading
 from functools import lru_cache
 from typing import Any, Sequence
 
@@ -7,6 +8,9 @@ from qdrant_client import QdrantClient, models
 
 from app.config import get_settings
 from app.ingestion.types import DocumentChunk
+
+_collection_lock = threading.Lock()
+_collection_verified = False
 
 
 @lru_cache(maxsize=1)
@@ -20,7 +24,23 @@ def get_qdrant_client() -> QdrantClient:
 
 
 def ensure_collection(client: QdrantClient | None = None) -> None:
-    """Create the cosine-similarity collection and filter indexes if absent."""
+    """Create the cosine-similarity collection and filter indexes if absent.
+
+    Uses a module-level flag so the expensive Qdrant HTTP check only
+    happens once per process, not on every query.
+    """
+    global _collection_verified
+    if _collection_verified:
+        return
+    with _collection_lock:
+        if _collection_verified:
+            return
+        _ensure_collection_impl(client)
+        _collection_verified = True
+
+
+def _ensure_collection_impl(client: QdrantClient | None = None) -> None:
+    """Actual collection creation/validation logic."""
     settings = get_settings()
     qdrant = client or get_qdrant_client()
     if qdrant.collection_exists(settings.qdrant_collection):
@@ -135,7 +155,6 @@ def search_points(
     if len(query_vector) != settings.embedding_dimension:
         raise ValueError("Query vector has an invalid dimension")
     qdrant = client or get_qdrant_client()
-    ensure_collection(qdrant)
     return qdrant.query_points(
         collection_name=settings.qdrant_collection,
         query=list(query_vector),

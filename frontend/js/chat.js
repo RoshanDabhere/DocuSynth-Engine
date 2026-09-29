@@ -510,6 +510,7 @@ function resizeComposer() {
 
 elements.chatForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (state.isStreaming) return;
   const question = elements.questionInput.value.trim();
   const documentIds = [...state.selectedDocumentIds];
   if (!question || !documentIds.length) {
@@ -517,12 +518,12 @@ elements.chatForm?.addEventListener("submit", async (event) => {
     return;
   }
 
+  setStreamingState(true);
   showStatus("");
   appendMessage("user", question);
   const assistantMessage = appendMessage("assistant");
   assistantMessage.message.classList.add("waiting");
   assistantMessage.body.textContent = "Searching your documents";
-  setStreamingState(true);
   elements.questionInput.value = "";
   resizeComposer();
 

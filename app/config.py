@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     max_upload_size_bytes: int = 10 * 1024 * 1024
     chunk_size_tokens: int = 500
     chunk_overlap_tokens: int = 75
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_recycle: int = 1800
 
     model_config = SettingsConfigDict(
         env_file=".env",
