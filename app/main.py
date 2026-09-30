@@ -13,6 +13,7 @@ from app.api.routes.health import router as health_router
 from app.config import get_settings
 from app.observability.logging import configure_logging
 from app.observability.middleware import RequestIdMiddleware
+from app.security.headers import SecurityHeadersMiddleware
 
 logger = logging.getLogger("app.main")
 
@@ -30,6 +31,7 @@ def create_application() -> FastAPI:
 
     # ── Middleware (order matters: outermost wraps first) ──
     application.add_middleware(RequestIdMiddleware)
+    application.add_middleware(SecurityHeadersMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.frontend_origin],

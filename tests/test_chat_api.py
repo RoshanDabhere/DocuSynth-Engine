@@ -95,9 +95,13 @@ class ChatApiTests(TestCase):
                 return_value=[],
             ) as load_memory_mock,
             patch("app.api.routes.chat.save_messages") as save_messages_mock,
+            patch("app.api.routes.chat.check_rate_limit"),
+            patch("app.api.routes.chat.scan_question", return_value=None),
+            patch("app.api.routes.chat.get_settings"),
         ):
             response = query_documents(
                 data=request,
+                request=Mock(),
                 current_user=SimpleNamespace(id=7),
                 database=database,
                 response=Response(),

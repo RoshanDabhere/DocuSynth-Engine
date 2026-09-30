@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger("app.api.routes.chat")
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 from app.api.dependencies import CurrentUser, DatabaseSession
 from app.chains.conversational_rag import load_conversation_memory
 from app.chains.rag_chain import run_rag, stream_rag
+from app.config import get_settings
 from app.database.connection import SessionLocal
 from app.generation.llm_service import LLMServiceError
 from app.models.conversation import Conversation
@@ -22,6 +23,8 @@ from app.models.documents import Document
 from app.models.message import Message
 from app.schemas.chat import ChatQueryRequest, ChatQueryResponse
 from app.schemas.conversation import ConversationDetailResponse, ConversationResponse
+from app.security.content_filter import scan_question
+from app.security.rate_limiter import check_rate_limit
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 CONVERSATION_TITLE_LENGTH = 80
@@ -155,11 +158,20 @@ def verify_selected_documents(
 @router.post("/query", response_model=ChatQueryResponse)
 def query_documents(
     data: ChatQueryRequest,
+    request: Request,
     current_user: CurrentUser,
     database: DatabaseSession,
     response: Response,
 ) -> ChatQueryResponse:
     """Answer a question using only the authenticated user's selected documents."""
+    settings = get_settings()
+    check_rate_limit(
+        request,
+        scope="chat:query",
+        max_requests=settings.rate_limit_chat_max,
+        window_seconds=settings.rate_limit_chat_window,
+    )
+    scan_question(data.question)
     verify_selected_documents(data.selected_document_ids, current_user.id, database)
     conversation = resolve_conversation(
         data.conversation_id,
@@ -212,10 +224,19 @@ def encode_sse(event_type: str, data: dict[str, object]) -> str:
 @router.post("/query/stream", response_class=StreamingResponse)
 def stream_query_documents(
     data: ChatQueryRequest,
+    request: Request,
     current_user: CurrentUser,
     database: DatabaseSession,
 ) -> StreamingResponse:
     """Stream retrieval metadata and answer fragments using Server-Sent Events."""
+    settings = get_settings()
+    check_rate_limit(
+        request,
+        scope="chat:query",
+        max_requests=settings.rate_limit_chat_max,
+        window_seconds=settings.rate_limit_chat_window,
+    )
+    scan_question(data.question)
     verify_selected_documents(data.selected_document_ids, current_user.id, database)
     conversation = resolve_conversation(
         data.conversation_id,

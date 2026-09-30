@@ -1,20 +1,29 @@
 """Registration, login, and current-user endpoints."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DatabaseSession
+from app.config import get_settings
 from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse
 from app.schemas.user import UserCreate, UserResponse
 from app.security.authentication import create_access_token, hash_password, verify_password
+from app.security.rate_limiter import check_rate_limit
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register_user(data: UserCreate, database: DatabaseSession) -> User:
+def register_user(data: UserCreate, database: DatabaseSession, request: Request) -> User:
     """Create a user with a securely hashed password."""
+    settings = get_settings()
+    check_rate_limit(
+        request,
+        scope="auth:register",
+        max_requests=settings.rate_limit_auth_max,
+        window_seconds=settings.rate_limit_auth_window,
+    )
     normalized_email = str(data.email).lower()
     existing_user = database.scalar(select(User).where(User.email == normalized_email))
     if existing_user is not None:
@@ -32,8 +41,15 @@ def register_user(data: UserCreate, database: DatabaseSession) -> User:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(data: LoginRequest, database: DatabaseSession) -> TokenResponse:
+def login(data: LoginRequest, database: DatabaseSession, request: Request) -> TokenResponse:
     """Verify credentials and return a JWT access token."""
+    settings = get_settings()
+    check_rate_limit(
+        request,
+        scope="auth:login",
+        max_requests=settings.rate_limit_auth_max,
+        window_seconds=settings.rate_limit_auth_window,
+    )
     normalized_email = str(data.email).lower()
     user = database.scalar(select(User).where(User.email == normalized_email))
     if user is None or not user.is_active or not verify_password(data.password, user.hashed_password):

@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_pool_recycle: int = 1800
+    rate_limit_auth_max: int = 5
+    rate_limit_auth_window: int = 60
+    rate_limit_chat_max: int = 10
+    rate_limit_chat_window: int = 60
 
     model_config = SettingsConfigDict(
         env_file=".env",
