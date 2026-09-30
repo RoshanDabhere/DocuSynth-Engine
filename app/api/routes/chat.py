@@ -1,8 +1,11 @@
 """Authenticated document question-answering endpoints."""
 
 import json
+import logging
 import time
 from datetime import datetime, timezone
+
+logger = logging.getLogger("app.api.routes.chat")
 
 from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
@@ -185,6 +188,14 @@ def query_documents(
         database,
     )
     response.headers["Server-Timing"] = f'rag;dur={rag_duration_ms:.1f}'
+    logger.info(
+        "RAG query: user=%d, docs=%s, confidence=%s, sources=%d, duration=%.0fms",
+        current_user.id,
+        data.selected_document_ids,
+        result["confidence"],
+        len(result["sources"]),
+        rag_duration_ms,
+    )
     return ChatQueryResponse(
         answer=result["answer"],
         sources=result["sources"],
@@ -257,6 +268,12 @@ def stream_query_documents(
                         {"conversation_id": conversation_id},
                     )
         except LLMServiceError:
+            logger.error(
+                "Streaming LLM error: user=%d, conversation=%d",
+                current_user.id,
+                conversation_id,
+                exc_info=True,
+            )
             yield encode_sse(
                 "error",
                 {"detail": "The language model is currently unavailable"},

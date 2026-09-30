@@ -1,8 +1,12 @@
 """LangGraph document-ingestion workflow."""
 
+import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
+
+logger = logging.getLogger("app.ingestion.pipeline")
 
 from langgraph.graph import END, START, StateGraph
 
@@ -100,10 +104,18 @@ INGESTION_GRAPH = build_ingestion_graph()
 
 def process_document(document_id: int) -> None:
     """Process one database document and persist its final status."""
+    start = time.perf_counter()
     with SessionLocal() as database:
         document = database.get(Document, document_id)
         if document is None:
+            logger.warning("Document %d not found, skipping ingestion", document_id)
             return
+        logger.info(
+            "Ingestion started: document_id=%d, filename=%s, type=%s",
+            document.id,
+            document.original_filename,
+            document.file_type,
+        )
         document.status = "processing"
         document.chunk_count = 0
         document.processed_at = None
@@ -123,7 +135,21 @@ def process_document(document_id: int) -> None:
             document.chunk_count = result["stored_count"]
             document.processed_at = datetime.now(timezone.utc)
             database.commit()
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.info(
+                "Ingestion complete: document_id=%d, chunks=%d, duration=%.0fms",
+                document.id,
+                result["stored_count"],
+                duration_ms,
+            )
         except Exception:
+            duration_ms = (time.perf_counter() - start) * 1000
+            logger.error(
+                "Ingestion failed: document_id=%d, duration=%.0fms",
+                document_id,
+                duration_ms,
+                exc_info=True,
+            )
             database.rollback()
             failed_document = database.get(Document, document_id)
             if failed_document is not None:
@@ -134,4 +160,8 @@ def process_document(document_id: int) -> None:
                 try:
                     delete_document_points(failed_document.user_id, failed_document.id)
                 except Exception:
-                    pass
+                    logger.warning(
+                        "Failed to clean up Qdrant points for document_id=%d",
+                        document_id,
+                        exc_info=True,
+                    )
