@@ -15,6 +15,7 @@ from app.database.connection import SessionLocal
 from app.embeddings.embedding_service import embed_texts
 from app.ingestion.chunkers import chunk_pages
 from app.ingestion.cleaners import clean_extracted_pages
+from app.ingestion.docx_parser import extract_docx_pages
 from app.ingestion.loaders import extract_txt_pages
 from app.ingestion.parsers import extract_pdf_pages
 from app.ingestion.types import DocumentChunk, ExtractedPage
@@ -42,6 +43,8 @@ def load_document(state: IngestionState) -> IngestionState:
         pages = extract_pdf_pages(state["file_path"])
     elif state["file_type"] == "txt":
         pages = extract_txt_pages(state["file_path"])
+    elif state["file_type"] == "docx":
+        pages = extract_docx_pages(state["file_path"])
     else:
         raise ValueError(f"Unsupported document type: {state['file_type']}")
     return {"pages": pages}

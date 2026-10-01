@@ -5,6 +5,9 @@ from pathlib import Path
 ALLOWED_TYPES = {
     ".pdf": {"application/pdf"},
     ".txt": {"text/plain"},
+    ".docx": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    },
 }
 
 
@@ -15,7 +18,7 @@ def validate_upload_metadata(filename: str | None, content_type: str | None) -> 
     safe_name = Path(filename).name
     extension = Path(safe_name).suffix.lower()
     if extension not in ALLOWED_TYPES:
-        raise ValueError("Only PDF and TXT files are supported")
+        raise ValueError("Only PDF, TXT, and DOCX files are supported")
     if content_type not in ALLOWED_TYPES[extension]:
         raise ValueError("The file MIME type does not match its extension")
     return safe_name, extension
@@ -29,3 +32,5 @@ def validate_file_header(extension: str, first_chunk: bytes) -> None:
         raise ValueError("The uploaded file is not a valid PDF")
     if extension == ".txt" and b"\x00" in first_chunk:
         raise ValueError("The uploaded TXT file appears to contain binary data")
+    if extension == ".docx" and not first_chunk.startswith(b"PK"):
+        raise ValueError("The uploaded file is not a valid DOCX")
